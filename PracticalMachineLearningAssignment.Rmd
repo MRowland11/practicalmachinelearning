@@ -1,0 +1,99 @@
+###Title: Practical Machine Learning Week 4 Assignment
+#####Author: Mark Rowland    Date:   1 March 2017  
+
+###Background  
+
+Using devices such as Jawbone Up, Nike FuelBand, and Fitbit it is now possible to collect a large amount of data about personal activity relatively inexpensively. One thing that people regularly do is quantify how much of a particular activity they do, but they rarely quantify *how well they do it*. In this project, we use use data from accelerometers on the belt, forearm, arm, and dumbell of 6 participants. They were asked to perform barbell lifts correctly and incorrectly in 5 different ways (classified as 'A' to 'E').
+  
+The goal is to use the data to build a model to classify which way they are doing the exercise. Further information and the data is taken from this website: http://groupware.les.inf.puc-rio.br/har 
+  
+    
+###Analysis and Conclusions
+  
+This section details the eight steps that were taken to build, test and validate a model to predict the way participants were undertaking their exercise
+  
+* **Step 1 - get caret library and set seed so results are repeatable**
+
+
+```{r echo=TRUE,message=FALSE}
+library(caret)
+set.seed(1234321) 
+```
+<br>  
+
+* **Step 2 - Read in Training Data**
+  
+```{r echo=TRUE}
+setwd("C:/projects/Coursera/Course8/Week4")
+pml_training = read.csv("pml-training.csv",stringsAsFactors=FALSE)
+```
+<br>    
+  
+* **Step 3 - Split the training set into 60% training and 40% test datasets**
+  
+    
+```{r echo=TRUE}
+inTrain <- createDataPartition(pml_training$classe, p=0.6, list = FALSE)
+pml_training_train <- pml_training[inTrain,]
+pml_training_test  <- pml_training[-inTrain,]
+#Check dimensions and View sample of data 
+#dim(pml_training)
+#str(pml_training)
+```  
+<br>    
+  
+* **Step 4 - Tidy up dataset to speed up model training**
+  
+To speed up the training of the model, keep only those 52 characteritics that are populated in the Validation quiz data
+  
+```{r echo=TRUE}
+reqvar <- c("classe","roll_belt","pitch_belt","yaw_belt","total_accel_belt","gyros_belt_x","gyros_belt_y","gyros_belt_z","accel_belt_x","accel_belt_y","accel_belt_z","magnet_belt_x","magnet_belt_y","magnet_belt_z","roll_arm","pitch_arm","yaw_arm","total_accel_arm","gyros_arm_x","gyros_arm_y","gyros_arm_z","accel_arm_x","accel_arm_y","accel_arm_z","magnet_arm_x","magnet_arm_y","magnet_arm_z","roll_dumbbell","pitch_dumbbell","yaw_dumbbell","total_accel_dumbbell","gyros_dumbbell_x","gyros_dumbbell_y","gyros_dumbbell_z","accel_dumbbell_x","accel_dumbbell_y","accel_dumbbell_z","magnet_dumbbell_x","magnet_dumbbell_y","magnet_dumbbell_z","roll_forearm","pitch_forearm","yaw_forearm","total_accel_forearm","gyros_forearm_x","gyros_forearm_y","gyros_forearm_z","accel_forearm_x","accel_forearm_y","accel_forearm_z","magnet_forearm_x","magnet_forearm_y","magnet_forearm_z")
+
+
+pml_training_train    <- pml_training_train[,reqvar]
+pml_training_test     <- pml_training_test[,reqvar]
+```  
+<br>    
+
+* **Step 5 - Check if any columns have missing values **
+  
+The test below returns zero, so we conclude that there are not any columns with missing values, so there is no further action required to deal with that.
+  
+```{r echo=TRUE}
+sum(sapply(pml_training_train, function(x) sum(is.na(x))))
+```  
+<br>    
+  
+* **Step 6 - Fit a model using Random Forest**
+  
+Use defaut options and all characteritics initially to train the model.
+This can be amended If accuracy or speed not acceptable. 
+
+The models takes a couple of hours to run but gives 99% accuracy. 
+That is accurate enough for these purposes
+
+```{r echo=TRUE,cache=TRUE}
+RFfit <- train(classe~ .  ,data=pml_training_train,method="rf")
+print(RFfit)
+```  
+<br>    
+    
+* **Step 7 - Use the 40% test set to get an out of sample accuracy & error rate**
+  
+Accuracy is 99% on the out of sample dataset (therefore the out of sample error rate is 1%)
+  
+```{r echo=TRUE}
+RFpred <- predict(RFfit,pml_training_test)
+confusionMatrix(RFpred,pml_training_test$classe)$overall['Accuracy']
+```  
+<br>    
+    
+* **Step 8 - Test on 20 observation Validation dataset**
+  
+Finally read in and use the 20 observation validation dataset to get predictions for the Week 4 quiz. These were tested and were all correct. 
+  
+```{r echo=TRUE}
+pml_validation = read.csv("pml-testing.csv",stringsAsFactors=FALSE)
+RFvalid <- predict(RFfit,pml_validation)
+RFvalid
+```  
